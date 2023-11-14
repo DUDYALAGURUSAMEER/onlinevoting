@@ -4,6 +4,7 @@ import { getUserInfo } from "../apicalls/users";
 import { useDispatch, useSelector } from "react-redux";
 import { SetUser } from "../redux/usersSlice.js";
 import { useNavigate } from "react-router-dom";
+import { HideLoading, ShowLoading } from "../redux/spinnerSlice.js";
 
 function ProtectedRoute({ children }) {
   const { user } = useSelector((state) => state.users);
@@ -19,16 +20,10 @@ function ProtectedRoute({ children }) {
       onClick: () => navigate("/"),
     },
     {
-      title: "Results",
-      paths: ["/results"],
+      title: "Polls",
+      paths: ["/polls"],
       icon: <i className="ri-bar-chart-line"></i>,
-      onClick: () => navigate("/results"),
-    },
-    {
-      title: "Profile",
-      paths: ["/profile"],
-      icon: <i className="ri-user-line"></i>,
-      onClick: () => navigate("/profile"),
+      onClick: () => navigate("/polls"),
     },
     {
       title: "Logout",
@@ -39,7 +34,6 @@ function ProtectedRoute({ children }) {
         navigate("/login");
       },
     },
-
   ];
   const adminMenu = [
     {
@@ -50,7 +44,7 @@ function ProtectedRoute({ children }) {
     },
     {
       title: "Polls",
-      paths: ["/admin/polls"],
+      paths: ["/admin/polls", "/admin/polls/add.", "/admin/polls/polls/.id"],
       icon: <i className="ri-file-list-line"></i>,
       onClick: () => navigate("/admin/polls"),
     },
@@ -59,12 +53,6 @@ function ProtectedRoute({ children }) {
       paths: ["/admin/result"],
       icon: <i className="ri-bar-chart-line"></i>,
       onClick: () => navigate("/admin/result"),
-    },
-    {
-      title: "Profile",
-      paths: ["/profile"],
-      icon: <i className="ri-user-line"></i>,
-      onClick: () => navigate("/profile"),
     },
     {
       title: "Logout",
@@ -78,8 +66,9 @@ function ProtectedRoute({ children }) {
   ];
   const getUserData = async () => {
     try {
+      dispatch(ShowLoading());
       const response = await getUserInfo();
-
+      dispatch(HideLoading());
       if (response.success) {
         dispatch(SetUser(response.data));
         if (response.data.isAdmin) {
@@ -91,6 +80,7 @@ function ProtectedRoute({ children }) {
         message.error(response.message);
       }
     } catch (error) {
+      dispatch(HideLoading());
       message.error(error.message);
     }
   };
@@ -98,16 +88,34 @@ function ProtectedRoute({ children }) {
     getUserData();
   }, []);
   const activeRoute = window.location.pathname;
+
+  const getIsActiveOrNot = (paths) => {
+    console.log("Active Route:", activeRoute);
+    if (paths.includes(activeRoute)) {
+      return true;
+    } else {
+      if (
+        activeRoute.includes("/admin/polls/edit") &&
+        paths.includes("/admin/polls")
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  };
   return (
     <div className="layout">
-      <div  className="flex gap-2  w-full h-full h-100">
-      <div className="sidebar">
-      <div className="menu">
+      <div className="flex gap-2  w-full h-full h-100">
+        <div className="sidebar">
+          <div className="menu">
             {menu.map((item, index) => {
               return (
-                <div 
-                className={`menu-item ${activeRoute === item.paths[0] && 'active-menu-item'}`}
-                key={index}
+                <div
+                  className={`menu-item ${
+                    getIsActiveOrNot(item.paths) && "active-menu-item"
+                  }`}
+                  key={index}
                   onClick={item.onClick}
                 >
                   {item.icon}
@@ -116,10 +124,10 @@ function ProtectedRoute({ children }) {
               );
             })}
           </div>
-      </div>
-      <div className="body">
-        <div className="header flex justify-between">
-        {!collapsed && (
+        </div>
+        <div className="body">
+          <div className="header flex justify-between">
+            {!collapsed && (
               <i
                 className="ri-close-line"
                 onClick={() => setCollapsed(true)}
@@ -131,17 +139,19 @@ function ProtectedRoute({ children }) {
                 onClick={() => setCollapsed(false)}
               ></i>
             )}
-        <h1 className="text-2xl text-white">Online Voting</h1>
-        <div className="flex items-center gap-1">
-        <i class="ri-user-fill"></i>
-        <h1 className="text-md underline text-white">{user?.name}</h1>
+            <h1 className="text-2xl text-white">Online Voting</h1>
+            <div>
+            <div className="flex items-center gap-1">
+              <i className="ri-user-fill"></i>
+              <h1 className="text-md underline text-white">{user?.name}</h1>
+            </div>
+            <span>Role : {user?.isAdmin ? "Admin" : "User"}</span>
+            </div>
+          </div>
+          <div className="content">{children}</div>
         </div>
-        </div>
-        <div className="content">{children}</div>
       </div>
     </div>
-    </div>
-    
   );
 }
 
